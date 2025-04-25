@@ -9,6 +9,9 @@ import (
 	"github.com/yofu/dxf"
 )
 
+// we dont have much on closed file format dwg
+// we are assuming any dwg accepting software will accept dxf with .dwg extension
+
 func GenerateDWG(path string, size int64) error {
 	// Create a simple DXF drawing
 	dwg := dxf.NewDrawing()

@@ -3,6 +3,7 @@ module github.com/hailam/genfile
 go 1.22.2
 
 require (
+	github.com/Eyevinn/mp4ff v0.48.0
 	github.com/unidoc/unioffice v1.39.0
 	github.com/xuri/excelize/v2 v2.9.0
 	github.com/yofu/dxf v0.0.0-20250421012503-acd811fa0dd4

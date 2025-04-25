@@ -4,111 +4,88 @@ import (
 	"bytes"
 	"fmt"
 	"image"
-	"image/color"
 	"image/jpeg"
+	"math"
 	"math/rand"
 	"os"
 	"time"
 )
 
-func GenerateJPEG(path string, size int64) error {
-	// Step 1: create random image (100x100)
-	width, height := 100, 100
-	img := image.NewRGBA(image.Rect(0, 0, width, height))
-	rand.Seed(time.Now().UnixNano())
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			img.Set(x, y, color.RGBA{
-				uint8(rand.Intn(256)),
-				uint8(rand.Intn(256)),
-				uint8(rand.Intn(256)),
-				255})
-		}
+func GenerateJPEG(path string, targetSize int64) error {
+	// 1) Estimate pixels for random-noise JPEG. Empirically, noise JPEG ≈ 1.1 bytes/pixel at Q90
+	estBPP := 1.1
+	pixels := float64(targetSize) / estBPP
+	side := int(math.Sqrt(pixels))
+	if side < 1 {
+		side = 1
 	}
-	// Step 2: encode to JPEG (use quality 90 for decent size)
-	var buf bytes.Buffer
+	return generateJPEGWithSide(path, targetSize, side)
+}
+
+func generateJPEGWithSide(path string, targetSize int64, side int) error {
+	// Create noisy image
+	img := image.NewRGBA(image.Rect(0, 0, side, side))
+	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for i := range img.Pix {
+		img.Pix[i] = byte(rnd.Intn(256))
+	}
+	// Encode to JPEG
+	buf := &bytes.Buffer{}
 	opt := jpeg.Options{Quality: 90}
-	if err := jpeg.Encode(&buf, img, &opt); err != nil {
+	if err := jpeg.Encode(buf, img, &opt); err != nil {
 		return err
 	}
-	jpegData := buf.Bytes()
-	if int64(len(jpegData)) > size {
-		return fmt.Errorf("cannot generate JPEG of %d bytes; minimum is %d", size, len(jpegData))
+	data := buf.Bytes()
+	if int64(len(data)) > targetSize {
+		// Overshot → scale by √(target/actual)
+		factor := math.Sqrt(float64(targetSize) / float64(len(data)))
+		newSide := int(float64(side) * factor)
+		if newSide < 1 {
+			return fmt.Errorf("target %d too small for any JPEG", targetSize)
+		}
+		return generateJPEGWithSide(path, targetSize, newSide)
 	}
-	// Step 3: determine padding needed
-	needed := size - int64(len(jpegData))
-	if needed == 0 {
-		return os.WriteFile(path, jpegData, 0666)
+	// Pad via COM segments
+	return padJPEGToSize(path, data, targetSize)
+}
+
+func padJPEGToSize(path string, jpegData []byte, targetSize int64) error {
+	needed := targetSize - int64(len(jpegData))
+	// Split at SOS (0xFFDA)
+	idx := bytes.Index(jpegData, []byte{0xFF, 0xDA})
+	if idx < 0 {
+		return fmt.Errorf("SOS marker not found")
 	}
-	// JPEG structure: begins with 0xFFD8 (SOI) and ends with 0xFFD9 (EOI).
-	// We'll insert COM segments before the final EOI.
-	// Find the position of the SOS (Start of Scan) marker (0xFFDA) to know where image data begins.
-	data := jpegData
-	var sosIndex int = -1
-	for i := 0; i < len(data)-1; i++ {
-		if data[i] == 0xFF && data[i+1] == 0xDA {
-			sosIndex = i
-			break
+	pre := jpegData[:idx]
+	post := jpegData[idx:]
+	// Build COM segments
+	var segments [][]byte
+	rem := needed
+	for rem > 0 {
+		chunk := rem
+		if chunk > 0xFFFD {
+			chunk = 0xFFFD
 		}
-	}
-	if sosIndex == -1 {
-		return fmt.Errorf("SOS marker not found in JPEG data")
-	}
-	// We will insert comments just before SOS (i.e., after all frame headers).
-	// Build the output JPEG in pieces: everything up to SOS, then comments, then the rest (from SOS to end).
-	pre := data[:sosIndex]        // up to SOS marker (not including 0xFF)
-	sosAndRest := data[sosIndex:] // from SOS to end (including EOI at end)
-	// Prepare comment segments:
-	// Each segment format: 0xFF 0xFE [2-byte length] [comment bytes]
-	// Length includes the two length bytes, so max length field = 65535 (meaning 65533 bytes of actual comment data).
-	neededComments := needed
-	var commentSegments [][]byte
-	for neededComments > 0 {
-		// Determine comment data size for this segment
-		var chunkSize int
-		if neededComments <= 65535-2 {
-			// if it fits in one segment
-			chunkSize = int(neededComments)
-		} else {
-			chunkSize = 65535 - 2 // max data per segment
-		}
-		if chunkSize < 0 {
-			break
-		}
-		// Ensure minimum segment length (including length bytes) is 4.
-		if chunkSize < 2 {
-			chunkSize = 2
-		}
-		neededComments -= int64(chunkSize)
-		// chunkSize includes the length bytes? Actually, we want to set the length field = chunkSize + 2.
-		// So actual comment text length = chunkSize (we include the length field in that).
-		// Let's say we want chunkSize_total including length = chunkSize+2.
-		lengthFieldVal := uint16(chunkSize + 2)
-		if lengthFieldVal < 4 {
-			lengthFieldVal = 4
-		}
-		// Generate random comment data of length = (lengthFieldVal - 2)
-		commentLen := int(lengthFieldVal) - 2
-		commentData := make([]byte, commentLen)
-		rand.Read(commentData)
-		// Ensure no 0xFF bytes in comment data followed by a non-zero (to avoid being mis-read as marker).
-		for i := 0; i < len(commentData)-1; i++ {
-			if commentData[i] == 0xFF && commentData[i+1] != 0x00 {
-				commentData[i+1] = 0x00 // stuff a zero if 0xFF occurs
+		// length = chunk + 2
+		length := uint16(chunk + 2)
+		hdr := []byte{0xFF, 0xFE, byte(length >> 8), byte(length & 0xFF)}
+		data := make([]byte, int(chunk))
+		rand.Read(data)
+		// escape 0xFF bytes
+		for i := 0; i+1 < len(data); i++ {
+			if data[i] == 0xFF && data[i+1] != 0x00 {
+				data[i+1] = 0x00
 			}
 		}
-		// Construct the segment bytes
-		seg := []byte{0xFF, 0xFE} // COM marker
-		seg = append(seg, byte(lengthFieldVal>>8), byte(lengthFieldVal&0xFF))
-		seg = append(seg, commentData...)
-		commentSegments = append(commentSegments, seg)
+		segments = append(segments, append(hdr, data...))
+		rem -= int64(len(hdr) + len(data))
 	}
-	// Assemble final JPEG data
-	var out bytes.Buffer
+	// Assemble
+	out := &bytes.Buffer{}
 	out.Write(pre)
-	for _, seg := range commentSegments {
+	for _, seg := range segments {
 		out.Write(seg)
 	}
-	out.Write(sosAndRest)
+	out.Write(post)
 	return os.WriteFile(path, out.Bytes(), 0666)
 }
