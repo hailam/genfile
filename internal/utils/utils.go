@@ -1,8 +1,8 @@
 package utils
 
 import (
+	"archive/zip"
 	"bytes"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -89,51 +89,71 @@ func WriteRandomBytes(w io.Writer, n int64) error {
 }
 
 // padZipFile adds a zip comment or dummy entry to reach the exact size.
-func PadZipFile(zipPath string, targetSize int64) error {
-	// Similar to what we did in generateZIP: open the zip, add comment
-	file, err := os.OpenFile(zipPath, os.O_RDWR, 0)
+func PadZipExtend(inPath string, targetSize int64) error {
+	info, err := os.Stat(inPath)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
-	stat, err := file.Stat()
+	orig := info.Size()
+	if orig > targetSize {
+		return fmt.Errorf("file is %d > target %d", orig, targetSize)
+	}
+	// compute overhead of empty pad.bin entry
+	padOH := ZipEntryOverhead()
+	needed := targetSize - orig - padOH
+
+	// open original
+	zr, err := zip.OpenReader(inPath)
 	if err != nil {
 		return err
 	}
-	currSize := stat.Size()
-	if currSize == targetSize {
-		return nil
+	defer zr.Close()
+
+	tmp := inPath + ".tmp"
+	outF, _ := os.Create(tmp)
+	zw := zip.NewWriter(outF)
+
+	// copy entries
+	for _, f := range zr.File {
+		hdr := f.FileHeader
+		w, _ := zw.CreateHeader(&hdr)
+		r, _ := f.Open()
+		io.Copy(w, r)
+		r.Close()
 	}
-	if currSize > targetSize {
-		return fmt.Errorf("file already larger than target size")
+	// create pad.bin uncompressed
+	padHdr := &zip.FileHeader{Name: "pad.bin", Method: zip.Store}
+	w, _ := zw.CreateHeader(padHdr)
+	zero := make([]byte, 64*1024)
+	for needed > 0 {
+		chunk := int64(len(zero))
+		if chunk > needed {
+			chunk = needed
+		}
+		w.Write(zero[:chunk])
+		needed -= chunk
 	}
-	diff := targetSize - currSize
-	if diff <= 65535 {
-		// We can use the comment field
-		// Seek to end and write diff bytes of comment
-		if _, err := file.Seek(0, io.SeekEnd); err != nil {
-			return err
-		}
-		comment := bytes.Repeat([]byte("X"), int(diff))
-		if _, err := file.Write(comment); err != nil {
-			return err
-		}
-		// Write the comment length into EOCD (last 2 bytes of original file)
-		if diff > 0xFFFF {
-			return fmt.Errorf("diff too large for comment")
-		}
-		// Overwrite original EOCD comment length (which is 0) with diff
-		if _, err := file.Seek(currSize-2, io.SeekStart); err != nil {
-			return err
-		}
-		var lenBuf [2]byte
-		binary.LittleEndian.PutUint16(lenBuf[:], uint16(diff))
-		if _, err := file.Write(lenBuf[:]); err != nil {
-			return err
-		}
-		return nil
+	zw.Close()
+	outF.Close()
+	os.Rename(tmp, inPath)
+	return nil
+}
+
+// zipEntryOverhead returns the byte-length of an empty 'pad.bin' entry in a new ZIP.
+func ZipEntryOverhead() int64 {
+	buf := &bytes.Buffer{}
+	zw := zip.NewWriter(buf)
+	hdr := &zip.FileHeader{Name: "pad.bin", Method: zip.Store}
+	zw.CreateHeader(hdr)
+	zw.Close()
+	return int64(buf.Len())
+}
+
+// randString returns a random A–Z string of length n.
+func RandString(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = byte('A' + rand.Intn(26))
 	}
-	// If diff > 65535, we need another strategy: perhaps add a dummy entry in the zip.
-	// For brevity, not fully implemented here. We could copy zip entries to a new file and insert a large file entry.
-	return fmt.Errorf("padding >65KB not implemented")
+	return string(b)
 }

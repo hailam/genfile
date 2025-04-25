@@ -2,68 +2,88 @@ package generators
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"os"
 	"strings"
 
+	"github.com/hailam/genfile/internal/utils"
 	"github.com/xuri/excelize/v2"
 )
 
 // generateXLSX creates an Excel file with enough random cells to approximate
 // the targetSize, then pads exactly the remainder via ZIP comment.
 func GenerateXLSX(path string, targetSize int64) error {
-	// 1) Measure overhead with a single cell
-	buf1 := &bytes.Buffer{}
-	f1 := excelize.NewFile()
-	sheet := f1.GetSheetName(0)
-	f1.SetCellValue(sheet, "A1", "X")
-	if err := f1.Write(buf1); err != nil {
+	// 1) Compute overhead of pad.bin entry
+	padOH := utils.ZipEntryOverhead()
+
+	// 2) Measure minimal XLSX overhead
+	buf := &bytes.Buffer{}
+	f0 := excelize.NewFile()
+	f0.SetCellValue("Sheet1", "A1", "X")
+	if err := f0.Write(buf); err != nil {
 		return err
 	}
-	overhead := int64(buf1.Len())
-
-	if overhead >= targetSize {
-		return fmt.Errorf("target %d < minimal XLSX %d", targetSize, overhead)
+	minimal := int64(buf.Len())
+	if minimal+padOH > targetSize {
+		return fmt.Errorf("target %d too small (min %d + padOH %d)", targetSize, minimal, padOH)
 	}
 
-	// 2) Measure avg per cell with 10 test cells
+	// 3) Estimate average bytes per cell
 	buf2 := &bytes.Buffer{}
 	f2 := excelize.NewFile()
 	for i := 1; i <= 10; i++ {
 		cell, _ := excelize.CoordinatesToCellName(1, i)
-		f2.SetCellValue(sheet, cell, strings.Repeat("X", 20))
+		f2.SetCellValue("Sheet1", cell, strings.Repeat("X", 20))
 	}
 	if err := f2.Write(buf2); err != nil {
 		return err
 	}
-	size2 := int64(buf2.Len())
-	avgCell := (size2 - overhead) / 10
+	avgCell := (int64(buf2.Len()) - minimal) / 10
 	if avgCell < 1 {
 		avgCell = 1
 	}
 
-	// 3) Compute pad entry overhead
-	padOH := zipEntryOverhead()
-
-	// 4) Determine how many cells we can fill
-	usable := targetSize - overhead - padOH
-	cellCount := usable / avgCell
-	if cellCount < 1 {
-		cellCount = 1
+	// 4) Find maximal cellCount so that fileSize + padOH ≤ target
+	maxUsable := targetSize - padOH
+	// initial guess
+	estCount := (maxUsable - minimal) / avgCell
+	if estCount < 1 {
+		estCount = 1
 	}
 
-	// 5) Build real workbook
+	var finalCount int
+	for cnt := estCount; cnt >= 1; cnt-- {
+		// write cnt cells
+		f := excelize.NewFile()
+		for r := 1; r <= int(cnt); r++ {
+			cell, _ := excelize.CoordinatesToCellName(1, r)
+			f.SetCellValue("Sheet1", cell, utils.RandString(20))
+		}
+		if err := f.SaveAs(path); err != nil {
+			return err
+		}
+		info, _ := os.Stat(path)
+		if info.Size()+padOH <= targetSize {
+			finalCount = int(cnt)
+			break
+		}
+		// overshot → try one fewer
+	}
+	if finalCount == 0 {
+		return errors.New("could not fit even one cell")
+	}
+
+	// 5) Re-write finalCount cells (to get the correct file)
 	f := excelize.NewFile()
-	rows := int(cellCount)
-	for r := 1; r <= rows; r++ {
+	for r := 1; r <= finalCount; r++ {
 		cell, _ := excelize.CoordinatesToCellName(1, r)
-		// random text ~20 chars
-		txt := randString(20)
-		f.SetCellValue(sheet, cell, txt)
+		f.SetCellValue("Sheet1", cell, utils.RandString(20))
 	}
 	if err := f.SaveAs(path); err != nil {
 		return err
 	}
 
-	// 6) Pad the ZIP to exact size
-	return padZipExtend(path, targetSize)
+	// 6) Pad via zip-extend
+	return utils.PadZipExtend(path, targetSize)
 }
