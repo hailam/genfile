@@ -2,7 +2,6 @@ package generators
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/binary"
 	"fmt"
 	"os"
@@ -10,79 +9,61 @@ import (
 	"github.com/Eyevinn/mp4ff/mp4"
 )
 
-// Hard-coded Annex B NAL units from Ben Mesander’s “World’s Smallest H.264 Encoder”
-// SPS: start-code + baseline profile, level 1.0 parameters :contentReference[oaicite:0]{index=0}
-var sps = []byte{
-	0x00, 0x00, 0x00, 0x01,
-	0x67, 0x42, 0x00, 0x0a, 0xf8, 0x41, 0xa2,
-}
+// NAL units from “World’s Smallest H.264 Encoder”
+var sps = []byte{0x00, 0x00, 0x00, 0x01, 0x67, 0x42, 0x00, 0x0a, 0xf8, 0x41, 0xa2}
+var pps = []byte{0x00, 0x00, 0x00, 0x01, 0x68, 0xce, 0x38, 0x80}
+var sliceHeader = []byte{0x00, 0x00, 0x00, 0x01, 0x05, 0x88, 0x84, 0x21, 0xa0}
+var macroblockHeader = []byte{0x0d, 0x00}
 
-// PPS: start-code + simple PPS :contentReference[oaicite:1]{index=1}
-var pps = []byte{
-	0x00, 0x00, 0x00, 0x01,
-	0x68, 0xce, 0x38, 0x80,
-}
-
-// SQCIF resolution: 128×96 → 8×6 macroblocks
+// SQCIF: 128×96 → 8×6 macroblocks
 const (
 	widthMB  = 128 / 16
 	heightMB = 96 / 16
 )
 
-// Slice header & macroblock header from Hello264.c :contentReference[oaicite:2]{index=2}
-var sliceHeader = []byte{0x00, 0x00, 0x00, 0x01, 0x05, 0x88, 0x84, 0x21, 0xa0}
-var macroblockHeader = []byte{0x0d, 0x00}
-
+// generateH264Elementary builds one blank I‐frame
 func generateH264Elementary() []byte {
-	buf := &bytes.Buffer{}
-	buf.Write(sps)
-	buf.Write(pps)
-	buf.Write(sliceHeader)
+	buf := make([]byte, 0, 1024*10)
+	buf = append(buf, sps...)
+	buf = append(buf, pps...)
+	buf = append(buf, sliceHeader...)
+	// zeroed macroblocks
 	for y := 0; y < heightMB; y++ {
 		for x := 0; x < widthMB; x++ {
-			buf.Write(macroblockHeader)
-			// Y plane: 16×16 zeros
-			buf.Write(make([]byte, 16*16))
-			// Cb/Cr: 8×8 zeros each
-			buf.Write(make([]byte, 8*8))
-			buf.Write(make([]byte, 8*8))
+			buf = append(buf, macroblockHeader...)
+			buf = append(buf, make([]byte, 16*16+8*8+8*8)...)
 		}
 	}
-	buf.WriteByte(0x80) // slice stop
-	return buf.Bytes()
+	buf = append(buf, 0x80) // slice stop
+	return buf
 }
 
-// generateMP4 writes a “progressive” MP4 with a single H.264 frame,
-// padding the ‘mdat’ to exactly targetSize bytes, using mp4ff only :contentReference[oaicite:3]{index=3}.
+// generateMP4 writes an MP4 of exactly targetSize bytes,
+// with `repeats` blank frames and correct duration metadata.
 func GenerateMP4(path string, targetSize int64) error {
-	// 1) Build raw H.264 ES
+	// 1) H.264 ES
 	h264 := generateH264Elementary()
+	hlen := int64(len(h264))
 
-	// 2) Create init segment (ftyp + moov)
+	// 2) Build init (ftyp+moov)
 	init := mp4.CreateEmptyInit()
-	// Add one video track
 	tid := init.Moov.Mvhd.NextTrackID
 	init.Moov.Mvhd.NextTrackID++
 	trak := mp4.CreateEmptyTrak(tid, 90000, "video", "und")
 	init.Moov.AddChild(trak)
 	init.Moov.Mvex.AddChild(mp4.CreateTrex(tid))
-	// Set AVC config: remove the 4-byte start codes for avcC :contentReference[oaicite:4]{index=4}
-	trak.SetAVCDescriptor("avc1",
-		[][]byte{sps[4:]},
-		[][]byte{pps[4:]},
-		true)
+	// give it our SPS/PPS in avcC
+	trak.SetAVCDescriptor("avc1", [][]byte{sps[4:]}, [][]byte{pps[4:]}, true)
 
-	// 3) Open file and write init
+	// 3) Write init to file
 	f, err := os.Create(path)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 	w := bufio.NewWriter(f)
-	ftyp := mp4.NewFtyp("isom", 0x200, []string{"isom", "iso2", "avc1", "mp41"})
-	if err := ftyp.Encode(w); err != nil {
-		return err
-	}
+	// ftyp
+	mp4.NewFtyp("isom", 0x200, []string{"isom", "iso2", "avc1", "mp41"}).Encode(w)
+	// moov
 	if err := init.Moov.Encode(w); err != nil {
 		return err
 	}
@@ -90,41 +71,75 @@ func GenerateMP4(path string, targetSize int64) error {
 		return err
 	}
 
-	// 4) Determine how much goes into mdat
+	// 4) Compute how many bytes for mdat
 	fi, _ := f.Stat()
 	initSize := fi.Size()
-	mdatSize := targetSize - initSize
-	// must at least hold header+frame
-	if mdatSize < int64(len(h264))+8 {
-		return fmt.Errorf("size too small: need ≥ %d", initSize+int64(len(h264))+8)
+	mdatTotal := targetSize - initSize
+	if mdatTotal < hlen+8 {
+		return fmt.Errorf("target %d too small; need at least %d", targetSize, initSize+hlen+8)
+	}
+	payload := mdatTotal - 8
+
+	// 5) Estimate repeats and leftover
+	repeats := payload / hlen
+	if repeats < 1 {
+		repeats = 1
+	}
+	// Choose 25 fps → 90000/25 = 3600 time‐units/frame
+	const fps = 25
+	sampleDur := uint32(90000 / fps)
+	totalDur := uint64(sampleDur) * uint64(repeats)
+
+	// 6) Patch durations & STTS
+	init.Moov.Mvhd.Duration = totalDur
+	for _, tr := range init.Moov.Traks {
+		tr.Tkhd.Duration = totalDur
+		tr.Mdia.Mdhd.Duration = totalDur
+		tr.Mdia.Minf.Stbl.Stts = &mp4.SttsBox{
+			Version: 0, Flags: 0,
+			SampleCount:     []uint32{uint32(repeats)},
+			SampleTimeDelta: []uint32{sampleDur},
+		}
 	}
 
-	// 5) Write mdat header
+	// 7) Rewrite moov with new durations
+	// Seek back and overwrite moov (simple approach: reopen file after ftyp, or
+	// if streaming isn’t needed, rebuild init and re-encode both ftyp+moov).
+	// For brevity, assume we re-encode both:
+	f.Truncate(0)
+	f.Seek(0, 0)
+	w.Reset(f)
+	mp4.NewFtyp("isom", 0x200, []string{"isom", "iso2", "avc1", "mp41"}).Encode(w)
+	init.Moov.Encode(w)
+	w.Flush()
+
+	// 8) Write mdat header
 	hdr := make([]byte, 8)
-	binary.BigEndian.PutUint32(hdr[0:4], uint32(mdatSize))
+	binary.BigEndian.PutUint32(hdr[0:4], uint32(mdatTotal))
 	copy(hdr[4:8], []byte("mdat"))
-	if _, err := w.Write(hdr); err != nil {
+	if _, err := f.Write(hdr); err != nil {
 		return err
 	}
-	// 6) Write frame
-	if _, err := w.Write(h264); err != nil {
-		return err
-	}
-	// 7) Pad with zeros
-	pad := mdatSize - int64(len(h264)) - 8
-	zero := make([]byte, 4096)
-	for pad > 0 {
-		n := int64(len(zero))
-		if n > pad {
-			n = pad
-		}
-		if _, err := w.Write(zero[:n]); err != nil {
+
+	// 9) Write frames
+	for i := int64(0); i < repeats; i++ {
+		if _, err := f.Write(h264); err != nil {
 			return err
 		}
-		pad -= n
 	}
-	if err := w.Flush(); err != nil {
-		return err
+
+	// 10) Pad remainder
+	rem := payload - (repeats * hlen)
+	zero := make([]byte, 4096)
+	for rem > 0 {
+		n := int64(len(zero))
+		if n > rem {
+			n = rem
+		}
+		if _, err := f.Write(zero[:n]); err != nil {
+			return err
+		}
+		rem -= n
 	}
-	return nil
+	return f.Close()
 }

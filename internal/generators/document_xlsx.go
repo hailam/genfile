@@ -1,51 +1,69 @@
 package generators
 
 import (
+	"bytes"
 	"fmt"
-	"os"
+	"strings"
 
-	"github.com/hailam/genfile/internal/utils"
 	"github.com/xuri/excelize/v2"
 )
 
-/*
-XLSX (Office Open XML for Excel) files are actually ZIP archives containing XML files. To generate a minimal .xlsx:
+// generateXLSX creates an Excel file with enough random cells to approximate
+// the targetSize, then pads exactly the remainder via ZIP comment.
+func GenerateXLSX(path string, targetSize int64) error {
+	// 1) Measure overhead with a single cell
+	buf1 := &bytes.Buffer{}
+	f1 := excelize.NewFile()
+	sheet := f1.GetSheetName(0)
+	f1.SetCellValue(sheet, "A1", "X")
+	if err := f1.Write(buf1); err != nil {
+		return err
+	}
+	overhead := int64(buf1.Len())
 
-    Use an Excel library like Excelize or tealeg/xlsx to create a simple workbook (maybe with one sheet and one cell of data). These libraries handle the internal structure (Content_Types, [Content_Types].xml, xl/workbook.xml, etc.) automatically​
-    awesome-go.com
-    .
+	if overhead >= targetSize {
+		return fmt.Errorf("target %d < minimal XLSX %d", targetSize, overhead)
+	}
 
-    Save the workbook to a file.
+	// 2) Measure avg per cell with 10 test cells
+	buf2 := &bytes.Buffer{}
+	f2 := excelize.NewFile()
+	for i := 1; i <= 10; i++ {
+		cell, _ := excelize.CoordinatesToCellName(1, i)
+		f2.SetCellValue(sheet, cell, strings.Repeat("X", 20))
+	}
+	if err := f2.Write(buf2); err != nil {
+		return err
+	}
+	size2 := int64(buf2.Len())
+	avgCell := (size2 - overhead) / 10
+	if avgCell < 1 {
+		avgCell = 1
+	}
 
-    Check the size. If additional padding is needed, we can use a similar approach as with ZIP files (since XLSX is a zip archive). Specifically, we can open the output file with archive/zip and insert a dummy large entry that Excel will ignore. For instance, adding an extra file in the ZIP that isn't referenced by the workbook. Excel will generally ignore unrecognized files in the package (it may not even notice them).
+	// 3) Compute pad entry overhead
+	padOH := zipEntryOverhead()
 
-    Alternatively, we can add a large innocuous XML part. For example, create a custom worksheet with lots of random data or a custom XML part with dummy content, and include it via the library if possible.
+	// 4) Determine how many cells we can fill
+	usable := targetSize - overhead - padOH
+	cellCount := usable / avgCell
+	if cellCount < 1 {
+		cellCount = 1
+	}
 
-    The simplest reliable method: after creating the xlsx, append a ZIP comment exactly as we did for ZIP. XLSX files often tolerate a ZIP comment without issues (the comment is outside the actual XML structure).
-*/
-
-func GenerateXLSX(path string, size int64) error {
-	// Create a new workbook with one sheet
+	// 5) Build real workbook
 	f := excelize.NewFile()
-	sheetName := "Sheet1"
-	// Write something in cell A1 just to have content
-	f.SetCellValue(sheetName, "A1", "Dummy Data")
-	// Save to file
+	rows := int(cellCount)
+	for r := 1; r <= rows; r++ {
+		cell, _ := excelize.CoordinatesToCellName(1, r)
+		// random text ~20 chars
+		txt := randString(20)
+		f.SetCellValue(sheet, cell, txt)
+	}
 	if err := f.SaveAs(path); err != nil {
 		return err
 	}
-	// Check current size
-	info, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-	baseSize := info.Size()
-	if baseSize > size {
-		return fmt.Errorf("cannot generate XLSX of %d bytes, minimum is %d", size, baseSize)
-	}
-	if baseSize == size {
-		return nil
-	}
-	// If padding is needed, use ZIP techniques:
-	return utils.PadZipFile(path, size)
+
+	// 6) Pad the ZIP to exact size
+	return padZipExtend(path, targetSize)
 }
