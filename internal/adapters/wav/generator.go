@@ -5,9 +5,14 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/hailam/genfile/internal/adapters/factory"
 	"github.com/hailam/genfile/internal/ports"
 	"github.com/hailam/genfile/internal/utils"
 )
+
+func init() {
+	factory.RegisterGenerator(ports.FileTypeWAV, New()) //
+}
 
 type WavGenerator struct{}
 

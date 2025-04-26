@@ -6,9 +6,15 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/hailam/genfile/internal/adapters/factory"
 	"github.com/hailam/genfile/internal/ports"
 	"github.com/yofu/dxf"
 )
+
+func init() {
+	factory.RegisterGenerator(ports.FileTypeDXF, New()) //
+	factory.RegisterGenerator(ports.FileTypeDWG, New()) //
+}
 
 type DxfGenerator struct{}
 

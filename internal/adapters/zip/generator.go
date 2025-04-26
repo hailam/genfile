@@ -7,9 +7,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/hailam/genfile/internal/adapters/factory"
 	"github.com/hailam/genfile/internal/ports"
 	"github.com/hailam/genfile/internal/utils"
 )
+
+func init() {
+	factory.RegisterGenerator(ports.FileTypeZIP, New()) //
+}
 
 type ZipGenerator struct{}
 

@@ -1,57 +1,57 @@
+// internal/adapters/factory/generator_factory.go
 package factory
 
 import (
 	"fmt"
+	"log"
+	"sync"
 
-	"github.com/hailam/genfile/internal/adapters/csv"
-	"github.com/hailam/genfile/internal/adapters/docx"
-	"github.com/hailam/genfile/internal/adapters/dxf"
-	"github.com/hailam/genfile/internal/adapters/html"
-	"github.com/hailam/genfile/internal/adapters/jpeg"
-	"github.com/hailam/genfile/internal/adapters/json"
-	"github.com/hailam/genfile/internal/adapters/mp4"
-	"github.com/hailam/genfile/internal/adapters/pdf"
-	"github.com/hailam/genfile/internal/adapters/png"
-	"github.com/hailam/genfile/internal/adapters/txt"
-	"github.com/hailam/genfile/internal/adapters/wav"
-	"github.com/hailam/genfile/internal/adapters/xlsx"
-	"github.com/hailam/genfile/internal/adapters/zip"
 	"github.com/hailam/genfile/internal/ports"
 )
 
-// StaticGeneratorFactory provides concrete implementations for FileGenerators.
-type StaticGeneratorFactory struct {
-	generators map[ports.FileType]ports.FileGenerator
-}
+// registry stores the registered generators.
+var (
+	generatorRegistry = make(map[ports.FileType]ports.FileGenerator)
+	registryMutex     sync.RWMutex
+)
 
-// NewStaticGeneratorFactory creates a new factory with pre-initialized generators.
-func NewStaticGeneratorFactory() ports.GeneratorFactory {
-	return &StaticGeneratorFactory{
-		generators: map[ports.FileType]ports.FileGenerator{
-			ports.FileTypeTXT:  txt.New(),
-			ports.FileTypePNG:  png.New(),
-			ports.FileTypeJPEG: jpeg.New(),
-			ports.FileTypeMP4:  mp4.New(),
-			ports.FileTypeM4V:  mp4.New(), // M4V uses the MP4 generator
-			ports.FileTypeWAV:  wav.New(),
-			ports.FileTypeDWG:  dxf.New(), // We actually Don't have a dedicated DWG generator
-			ports.FileTypeDXF:  dxf.New(),
-			ports.FileTypeZIP:  zip.New(),
-			ports.FileTypeXLSX: xlsx.New(),
-			ports.FileTypeDOCX: docx.New(),
-			ports.FileTypePDF:  pdf.New(),
-			ports.FileTypeCSV:  csv.New(),
-			ports.FileTypeJSON: json.New(),
-			ports.FileTypeHTML: html.New(),
-		},
+// RegisterGenerator is called by generator packages during their init() phase.
+func RegisterGenerator(fileType ports.FileType, generator ports.FileGenerator) {
+	registryMutex.Lock()
+	defer registryMutex.Unlock()
+	if _, exists := generatorRegistry[fileType]; exists {
+		log.Printf("Warning: Duplicate generator registration for %s. Overwriting existing one.", fileType)
 	}
+	generatorRegistry[fileType] = generator
+	// fmt.Printf("factory: Registered generator for %s\n", fileType)
 }
 
-// For returns the appropriate FileGenerator for the given FileType.
-func (f *StaticGeneratorFactory) For(t ports.FileType) (ports.FileGenerator, error) {
-	gen, ok := f.generators[t]
+// DynamicGeneratorFactory uses the registry populated by RegisterGenerator.
+type DynamicGeneratorFactory struct{}
+
+// NewGeneratorFactory creates a new factory that uses the global registry.
+func NewGeneratorFactory() ports.GeneratorFactory {
+	return &DynamicGeneratorFactory{}
+}
+
+// For returns the appropriate FileGenerator for the given FileType from the registry.
+func (f *DynamicGeneratorFactory) For(t ports.FileType) (ports.FileGenerator, error) {
+	registryMutex.RLock()
+	defer registryMutex.RUnlock()
+
+	gen, ok := generatorRegistry[t]
 	if !ok {
-		return nil, fmt.Errorf("unsupported file type: %s", t)
+		return nil, fmt.Errorf("unsupported file type: '%s' (no generator registered or check file extension)", t)
 	}
 	return gen, nil
+}
+
+func RegisteredTypes() []ports.FileType {
+	registryMutex.RLock()
+	defer registryMutex.RUnlock()
+	types := make([]ports.FileType, 0, len(generatorRegistry))
+	for t := range generatorRegistry {
+		types = append(types, t)
+	}
+	return types
 }

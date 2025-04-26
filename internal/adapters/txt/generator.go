@@ -4,8 +4,13 @@ import (
 	"math/rand/v2"
 	"os"
 
+	"github.com/hailam/genfile/internal/adapters/factory"
 	"github.com/hailam/genfile/internal/ports"
 )
+
+func init() {
+	factory.RegisterGenerator(ports.FileTypeTXT, New()) //
+}
 
 type TxtGenerator struct{}
 

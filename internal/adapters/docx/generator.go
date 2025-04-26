@@ -8,9 +8,15 @@ import (
 	"io"
 	"os"
 
+	"github.com/hailam/genfile/internal/adapters/factory"
 	"github.com/hailam/genfile/internal/ports"
 	"github.com/hailam/genfile/internal/utils"
 )
+
+// init registers the CSV generator with the factory.
+func init() {
+	factory.RegisterGenerator(ports.FileTypeDOCX, New()) //
+}
 
 type DocxGenerator struct{}
 

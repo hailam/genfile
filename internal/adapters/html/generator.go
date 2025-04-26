@@ -6,8 +6,13 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hailam/genfile/internal/adapters/factory"
 	"github.com/hailam/genfile/internal/ports"
 )
+
+func init() {
+	factory.RegisterGenerator(ports.FileTypeHTML, New()) //
+}
 
 const (
 	// Basic HTML5 template structure

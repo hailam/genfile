@@ -6,8 +6,14 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hailam/genfile/internal/adapters/factory"
 	"github.com/hailam/genfile/internal/ports"
 )
+
+// init registers the CSV generator with the factory.
+func init() {
+	factory.RegisterGenerator(ports.FileTypeCSV, New()) //
+}
 
 const (
 	// Define structure for CSV generation

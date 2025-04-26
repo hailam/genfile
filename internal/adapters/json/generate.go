@@ -6,9 +6,13 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hailam/genfile/internal/adapters/factory"
 	"github.com/hailam/genfile/internal/ports"
-	// utils "github.com/hailam/genfile/internal/utils" // Can use utils.RandString if preferred
 )
+
+func init() {
+	factory.RegisterGenerator(ports.FileTypeJSON, New()) //
+}
 
 const (
 	// Define structure for JSON generation

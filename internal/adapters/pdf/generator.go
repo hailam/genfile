@@ -8,9 +8,14 @@ import (
 	"os"
 	"strings"
 
+	"github.com/hailam/genfile/internal/adapters/factory"
 	"github.com/hailam/genfile/internal/ports"
 	"github.com/signintech/gopdf"
 )
+
+func init() {
+	factory.RegisterGenerator(ports.FileTypePDF, New()) //
+}
 
 //go:embed fonts/DejaVuSans.ttf
 var dejaVuSansFontData []byte

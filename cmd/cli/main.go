@@ -9,6 +9,22 @@ import (
 	"github.com/hailam/genfile/internal/adapters/factory"
 	adapterutils "github.com/hailam/genfile/internal/adapters/utils"
 	"github.com/hailam/genfile/internal/application"
+
+	// --- Add blank imports for ALL generator packages ---
+	// This ensures their init() functions run and register the generators.
+	_ "github.com/hailam/genfile/internal/adapters/csv"
+	_ "github.com/hailam/genfile/internal/adapters/docx"
+	_ "github.com/hailam/genfile/internal/adapters/dxf"
+	_ "github.com/hailam/genfile/internal/adapters/html"
+	_ "github.com/hailam/genfile/internal/adapters/jpeg"
+	_ "github.com/hailam/genfile/internal/adapters/json"
+	_ "github.com/hailam/genfile/internal/adapters/mp4"
+	_ "github.com/hailam/genfile/internal/adapters/pdf"
+	_ "github.com/hailam/genfile/internal/adapters/png"
+	_ "github.com/hailam/genfile/internal/adapters/txt"
+	_ "github.com/hailam/genfile/internal/adapters/wav"
+	_ "github.com/hailam/genfile/internal/adapters/xlsx"
+	_ "github.com/hailam/genfile/internal/adapters/zip"
 )
 
 // Variables to hold flag values
@@ -18,7 +34,7 @@ var sizeStr string
 func main() {
 	// --- Composition Root: Initialize Adapters and Core Logic ---
 	// This remains the same as before
-	generatorFactory := factory.NewStaticGeneratorFactory()
+	generatorFactory := factory.NewGeneratorFactory()
 	sizeParser := adapterutils.NewUtilSizeParser()
 	fileService := application.NewFileService(generatorFactory, sizeParser)
 	// --- End Composition Root ---

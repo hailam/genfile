@@ -7,8 +7,14 @@ import (
 	"os"
 
 	"github.com/Eyevinn/mp4ff/mp4"
+	"github.com/hailam/genfile/internal/adapters/factory"
 	"github.com/hailam/genfile/internal/ports"
 )
+
+func init() {
+	factory.RegisterGenerator(ports.FileTypeM4V, New()) //
+	factory.RegisterGenerator(ports.FileTypeMP4, New()) //
+}
 
 type Mp4Generator struct{}
 
