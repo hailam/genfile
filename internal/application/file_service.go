@@ -67,6 +67,8 @@ func mapExtensionToFileType(ext string) (ports.FileType, error) {
 		return ports.FileTypeWAV, nil
 	case "dwg":
 		return ports.FileTypeDWG, nil
+	case "dxf":
+		return ports.FileTypeDXF, nil
 	case "zip":
 		return ports.FileTypeZIP, nil
 	case "xlsx":
@@ -77,6 +79,8 @@ func mapExtensionToFileType(ext string) (ports.FileType, error) {
 		return ports.FileTypePDF, nil
 	case "csv":
 		return ports.FileTypeCSV, nil
+	case "json":
+		return ports.FileTypeJSON, nil
 	default:
 		return "", fmt.Errorf("unsupported file extension: %s", ext)
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/hailam/genfile/internal/adapters/docx"
 	"github.com/hailam/genfile/internal/adapters/dxf"
 	"github.com/hailam/genfile/internal/adapters/jpeg"
+	"github.com/hailam/genfile/internal/adapters/json"
 	"github.com/hailam/genfile/internal/adapters/mp4"
 	"github.com/hailam/genfile/internal/adapters/pdf"
 	"github.com/hailam/genfile/internal/adapters/png"
@@ -38,6 +39,7 @@ func NewStaticGeneratorFactory() ports.GeneratorFactory {
 			ports.FileTypeDOCX: docx.New(),
 			ports.FileTypePDF:  pdf.New(),
 			ports.FileTypeCSV:  csv.New(),
+			ports.FileTypeJSON: json.New(),
 		},
 	}
 }

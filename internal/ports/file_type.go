@@ -11,9 +11,11 @@ const (
 	FileTypeM4V  FileType = "m4v"
 	FileTypeWAV  FileType = "wav"
 	FileTypeDWG  FileType = "dwg"
+	FileTypeDXF  FileType = "dxf"
 	FileTypeZIP  FileType = "zip"
 	FileTypeXLSX FileType = "xlsx"
 	FileTypeDOCX FileType = "docx"
 	FileTypePDF  FileType = "pdf"
 	FileTypeCSV  FileType = "csv"
+	FileTypeJSON FileType = "json"
 )
