@@ -1,5 +1,7 @@
 # build file
 genfile
+bin/*
+
 .DS_Store
 
 tmp

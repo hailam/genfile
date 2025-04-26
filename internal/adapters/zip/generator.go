@@ -1,4 +1,4 @@
-package generators
+package zip
 
 import (
 	"archive/zip"
@@ -7,14 +7,17 @@ import (
 	"os"
 	"time"
 
+	"github.com/hailam/genfile/internal/ports"
 	"github.com/hailam/genfile/internal/utils"
 )
 
-// GenerateZIP creates a ZIP containing one uncompressed entry "dummy.bin".
-// It first computes the ZIP overhead for an empty dummy.bin, then
-// writes exactly (size − overhead) random bytes into that entry so
-// the closed ZIP is exactly `size` bytes long.
-func GenerateZIP(path string, size int64) error {
+type ZipGenerator struct{}
+
+func New() ports.FileGenerator {
+	return &ZipGenerator{}
+}
+
+func (g *ZipGenerator) Generate(path string, size int64) error {
 	const entryName = "dummy.bin"
 
 	// 1. Compute overhead: size of a ZIP with dummy.bin but zero payload.
