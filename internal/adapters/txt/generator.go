@@ -9,7 +9,10 @@ import (
 )
 
 func init() {
-	factory.RegisterGenerator(ports.FileTypeTXT, New()) //
+	gen := New()
+	factory.RegisterGenerator(ports.FileTypeTXT, gen)
+	factory.RegisterGenerator(ports.FileTypeLog, gen) // Register for LOG
+	factory.RegisterGenerator(ports.FileTypeMD, gen)
 }
 
 type TxtGenerator struct{}

@@ -17,6 +17,7 @@ import (
 	_ "github.com/hailam/genfile/internal/adapters/csv"
 	_ "github.com/hailam/genfile/internal/adapters/docx"
 	_ "github.com/hailam/genfile/internal/adapters/dxf"
+	_ "github.com/hailam/genfile/internal/adapters/gif"
 	_ "github.com/hailam/genfile/internal/adapters/html"
 	_ "github.com/hailam/genfile/internal/adapters/jpeg"
 	_ "github.com/hailam/genfile/internal/adapters/json"
@@ -26,6 +27,7 @@ import (
 	_ "github.com/hailam/genfile/internal/adapters/txt"
 	_ "github.com/hailam/genfile/internal/adapters/wav"
 	_ "github.com/hailam/genfile/internal/adapters/xlsx"
+	_ "github.com/hailam/genfile/internal/adapters/xml"
 	_ "github.com/hailam/genfile/internal/adapters/zip"
 )
 

@@ -19,4 +19,8 @@ const (
 	FileTypeCSV  FileType = "csv"
 	FileTypeJSON FileType = "json"
 	FileTypeHTML FileType = "html"
+	FileTypeXML  FileType = "xml"
+	FileTypeGIF  FileType = "gif"
+	FileTypeLog  FileType = "log"
+	FileTypeMD   FileType = "md"
 )

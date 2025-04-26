@@ -11,14 +11,14 @@
 
 ## Supported Formats
 
-- Text: `.txt`
-- Images: `.png`, `.jpg`, `.jpeg`
+- Text: `.txt`, `.log`, `.md`
+- Images: `.png`, `.jpg`, `.jpeg`, `.gif`
 - Video: `.mp4`, `.m4v`
 - Audio: `.wav`
 - Documents: `.docx`, `.xlsx`, `.pdf`, `.csv`
 - CAD: `.dwg` (generates a basic DXF file)
 - Archives: `.zip`
-- Others: `.html`, `.json`
+- Web/Data: `.html`, `.json`, `.json`
 
 ## Installation / Building
 

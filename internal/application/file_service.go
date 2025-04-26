@@ -53,7 +53,7 @@ func (s *FileService) CreateFile(outPath, sizeSpec string) error {
 // mapExtensionToFileType maps file extensions to FileType constants.
 func mapExtensionToFileType(ext string) (ports.FileType, error) {
 	switch ext {
-	case "txt":
+	case "txt", "text":
 		return ports.FileTypeTXT, nil
 	case "png":
 		return ports.FileTypePNG, nil
@@ -83,6 +83,14 @@ func mapExtensionToFileType(ext string) (ports.FileType, error) {
 		return ports.FileTypeJSON, nil
 	case "html":
 		return ports.FileTypeHTML, nil
+	case "md":
+		return ports.FileTypeMD, nil
+	case "log":
+		return ports.FileTypeLog, nil
+	case "xml":
+		return ports.FileTypeXML, nil
+	case "gif":
+		return ports.FileTypeGIF, nil
 	default:
 		return "", fmt.Errorf("unsupported file extension: %s", ext)
 	}
