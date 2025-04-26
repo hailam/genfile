@@ -18,4 +18,5 @@ const (
 	FileTypePDF  FileType = "pdf"
 	FileTypeCSV  FileType = "csv"
 	FileTypeJSON FileType = "json"
+	FileTypeHTML FileType = "html"
 )

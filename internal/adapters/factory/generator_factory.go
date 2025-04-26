@@ -6,6 +6,7 @@ import (
 	"github.com/hailam/genfile/internal/adapters/csv"
 	"github.com/hailam/genfile/internal/adapters/docx"
 	"github.com/hailam/genfile/internal/adapters/dxf"
+	"github.com/hailam/genfile/internal/adapters/html"
 	"github.com/hailam/genfile/internal/adapters/jpeg"
 	"github.com/hailam/genfile/internal/adapters/json"
 	"github.com/hailam/genfile/internal/adapters/mp4"
@@ -34,12 +35,14 @@ func NewStaticGeneratorFactory() ports.GeneratorFactory {
 			ports.FileTypeM4V:  mp4.New(), // M4V uses the MP4 generator
 			ports.FileTypeWAV:  wav.New(),
 			ports.FileTypeDWG:  dxf.New(), // We actually Don't have a dedicated DWG generator
+			ports.FileTypeDXF:  dxf.New(),
 			ports.FileTypeZIP:  zip.New(),
 			ports.FileTypeXLSX: xlsx.New(),
 			ports.FileTypeDOCX: docx.New(),
 			ports.FileTypePDF:  pdf.New(),
 			ports.FileTypeCSV:  csv.New(),
 			ports.FileTypeJSON: json.New(),
+			ports.FileTypeHTML: html.New(),
 		},
 	}
 }
