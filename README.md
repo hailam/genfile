@@ -17,7 +17,7 @@ The tool leverages a Hexagonal Architecture pattern to separate core logic from 
 - Images: `.png`, `.jpg`, `.jpeg`
 - Video: `.mp4`, `.m4v`
 - Audio: `.wav`
-- Documents: `.docx`, `.xlsx`
+- Documents: `.docx`, `.xlsx`, `.pdf`
 - CAD: `.dwg` (generates a basic DXF file)
 - Archives: `.zip`
 
