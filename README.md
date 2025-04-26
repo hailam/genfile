@@ -2,8 +2,6 @@
 
 `genfile` is a command-line utility written in Go to generate placeholder files of various formats with a precise target size. It's useful for testing scenarios that require files of specific sizes or types without needing actual meaningful content.
 
-The tool leverages a Hexagonal Architecture pattern to separate core logic from external concerns like the CLI interface and specific file format generation details.
-
 ## Features
 
 - **Exact Sizing:** Generates files that match the requested size byte-for-byte using format-specific padding techniques.
@@ -20,12 +18,13 @@ The tool leverages a Hexagonal Architecture pattern to separate core logic from 
 - Documents: `.docx`, `.xlsx`, `.pdf`, `.csv`
 - CAD: `.dwg` (generates a basic DXF file)
 - Archives: `.zip`
+- Others: `.html`, `.json`
 
 ## Installation / Building
 
 To build the `genfile` binary:
 
-1.  Ensure you have Go installed (version 1.18 or later recommended).
+1.  Ensure you have Go installed (version 1.24.2 or later recommended).
 2.  Clone the repository (if you haven't already).
 3.  Navigate to the project's root directory.
 4.  Run the build command using the Makefile:
@@ -81,5 +80,3 @@ This project follows the principles of Hexagonal Architecture (Ports and Adapter
 - **Adapters (`internal/adapters`):** Implement the ports.
   - _Driving Adapters:_ The CLI (`cmd/cli/main.go`) drives the application based on user input.
   - _Driven Adapters:_ Concrete file generators (`internal/adapters/png`, `internal/adapters/zip`, etc.), the `GeneratorFactory` implementation (`internal/adapters/factory`), and the `SizeParser` implementation (`internal/adapters/utils`) provide the necessary functionalities required by the core application.
-
-This separation allows for easier testing, maintenance, and potential replacement or addition of adapters (e.g., adding new file formats or a different UI) without modifying the core application logic.
