@@ -3,6 +3,7 @@ package factory
 import (
 	"fmt"
 
+	"github.com/hailam/genfile/internal/adapters/csv"
 	"github.com/hailam/genfile/internal/adapters/docx"
 	"github.com/hailam/genfile/internal/adapters/dxf"
 	"github.com/hailam/genfile/internal/adapters/jpeg"
@@ -36,6 +37,7 @@ func NewStaticGeneratorFactory() ports.GeneratorFactory {
 			ports.FileTypeXLSX: xlsx.New(),
 			ports.FileTypeDOCX: docx.New(),
 			ports.FileTypePDF:  pdf.New(),
+			ports.FileTypeCSV:  csv.New(),
 		},
 	}
 }

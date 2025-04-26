@@ -15,4 +15,5 @@ const (
 	FileTypeXLSX FileType = "xlsx"
 	FileTypeDOCX FileType = "docx"
 	FileTypePDF  FileType = "pdf"
+	FileTypeCSV  FileType = "csv"
 )
