@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
+	"github.com/briandowns/spinner"
 	"github.com/spf13/cobra"
 
 	"github.com/hailam/genfile/internal/adapters/factory"
@@ -60,8 +62,14 @@ The content generated is typically random or minimal structure.`,
 				os.Exit(1)
 			}
 
+			// start spinner
+			spinner := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+			spinner.Prefix = fmt.Sprintf("Generating %s (%s)... ", outputPath, sizeStr)
+			spinner.Start()
+
 			// --- Execute Core Logic ---
-			err := fileService.CreateFile(outputPath, sizeStr) //
+			err := fileService.CreateFile(outputPath, sizeStr)
+			spinner.Stop()
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error generating file: %v\n", err)
 				os.Exit(1)

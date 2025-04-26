@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image"
 	"image/jpeg"
+	"log"
 	"math"
 	"math/rand/v2"
 	"os"
@@ -45,6 +46,7 @@ func generateJPEGWithSide(path string, targetSize int64, side int) error {
 	buf := &bytes.Buffer{}
 	opt := jpeg.Options{Quality: 90}
 	if err := jpeg.Encode(buf, img, &opt); err != nil {
+		log.Printf("JPEG encode error: %v", err)
 		return err
 	}
 	data := buf.Bytes()
