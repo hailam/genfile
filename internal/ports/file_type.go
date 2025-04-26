@@ -14,4 +14,5 @@ const (
 	FileTypeZIP  FileType = "zip"
 	FileTypeXLSX FileType = "xlsx"
 	FileTypeDOCX FileType = "docx"
+	FileTypePDF  FileType = "pdf"
 )

@@ -73,6 +73,8 @@ func mapExtensionToFileType(ext string) (ports.FileType, error) {
 		return ports.FileTypeXLSX, nil
 	case "docx":
 		return ports.FileTypeDOCX, nil
+	case "pdf":
+		return ports.FileTypePDF, nil
 	default:
 		return "", fmt.Errorf("unsupported file extension: %s", ext)
 	}

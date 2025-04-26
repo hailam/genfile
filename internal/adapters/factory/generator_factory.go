@@ -7,6 +7,7 @@ import (
 	"github.com/hailam/genfile/internal/adapters/dxf"
 	"github.com/hailam/genfile/internal/adapters/jpeg"
 	"github.com/hailam/genfile/internal/adapters/mp4"
+	"github.com/hailam/genfile/internal/adapters/pdf"
 	"github.com/hailam/genfile/internal/adapters/png"
 	"github.com/hailam/genfile/internal/adapters/txt"
 	"github.com/hailam/genfile/internal/adapters/wav"
@@ -24,16 +25,17 @@ type StaticGeneratorFactory struct {
 func NewStaticGeneratorFactory() ports.GeneratorFactory {
 	return &StaticGeneratorFactory{
 		generators: map[ports.FileType]ports.FileGenerator{
-			ports.FileTypeTXT:  txt.New(),  //
-			ports.FileTypePNG:  png.New(),  //
-			ports.FileTypeJPEG: jpeg.New(), //
-			ports.FileTypeMP4:  mp4.New(),  //
-			ports.FileTypeM4V:  mp4.New(),  // M4V uses the MP4 generator
-			ports.FileTypeWAV:  wav.New(),  //
-			ports.FileTypeDWG:  dxf.New(),  // We actually Don't have a dedicated DWG generator
-			ports.FileTypeZIP:  zip.New(),  //
-			ports.FileTypeXLSX: xlsx.New(), //
-			ports.FileTypeDOCX: docx.New(), //
+			ports.FileTypeTXT:  txt.New(),
+			ports.FileTypePNG:  png.New(),
+			ports.FileTypeJPEG: jpeg.New(),
+			ports.FileTypeMP4:  mp4.New(),
+			ports.FileTypeM4V:  mp4.New(), // M4V uses the MP4 generator
+			ports.FileTypeWAV:  wav.New(),
+			ports.FileTypeDWG:  dxf.New(), // We actually Don't have a dedicated DWG generator
+			ports.FileTypeZIP:  zip.New(),
+			ports.FileTypeXLSX: xlsx.New(),
+			ports.FileTypeDOCX: docx.New(),
+			ports.FileTypePDF:  pdf.New(),
 		},
 	}
 }
@@ -42,13 +44,6 @@ func NewStaticGeneratorFactory() ports.GeneratorFactory {
 func (f *StaticGeneratorFactory) For(t ports.FileType) (ports.FileGenerator, error) {
 	gen, ok := f.generators[t]
 	if !ok {
-		// Handle potentially unsupported M4V explicitly if needed, or rely on mapping logic
-		if t == ports.FileTypeM4V {
-			gen, ok = f.generators[ports.FileTypeMP4] // Fallback M4V to MP4
-			if ok {
-				return gen, nil
-			}
-		}
 		return nil, fmt.Errorf("unsupported file type: %s", t)
 	}
 	return gen, nil

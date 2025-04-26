@@ -1,9 +1,10 @@
 module github.com/hailam/genfile
 
-go 1.22.2
+go 1.24.2
 
 require (
 	github.com/Eyevinn/mp4ff v0.48.0
+	github.com/signintech/gopdf v0.32.0
 	github.com/spf13/cobra v1.9.1
 	github.com/xuri/excelize/v2 v2.9.0
 	github.com/yofu/dxf v0.0.0-20250421012503-acd811fa0dd4
@@ -12,6 +13,8 @@ require (
 require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
+	github.com/phpdave11/gofpdi v1.0.14-0.20211212211723-1f10f9844311 // indirect
+	github.com/pkg/errors v0.8.1 // indirect
 	github.com/richardlehane/mscfb v1.0.4 // indirect
 	github.com/richardlehane/msoleps v1.0.4 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
