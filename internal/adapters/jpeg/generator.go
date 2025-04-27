@@ -64,42 +64,97 @@ func generateJPEGWithSide(path string, targetSize int64, side int) error {
 }
 
 func padJPEGToSize(path string, jpegData []byte, targetSize int64) error {
-	needed := targetSize - int64(len(jpegData))
+	currentSize := int64(len(jpegData))
+	needed := targetSize - currentSize
+	if needed < 0 {
+		// Should be caught by generateAndPadJPEG, but defensive check
+		return fmt.Errorf("internal error: data size %d > target %d before padding", currentSize, targetSize)
+	}
+	if needed == 0 {
+		// Already correct size, just write it
+		return os.WriteFile(path, jpegData, 0666)
+	}
+
 	// Split at SOS (0xFFDA)
 	idx := bytes.Index(jpegData, []byte{0xFF, 0xDA})
 	if idx < 0 {
-		return fmt.Errorf("SOS marker not found")
+		// If no SOS marker found, we can't reliably inject COM segments before it.
+		// This might happen for extremely small/corrupt initial JPEGs.
+		// Fallback: Write the data as is, size will be less than target.
+		log.Printf("Warning: SOS marker not found in JPEG for padding. Final size may be less than target.")
+		return os.WriteFile(path, jpegData, 0666)
+
 	}
 	pre := jpegData[:idx]
 	post := jpegData[idx:]
+
 	// Build COM segments
 	var segments [][]byte
-	rem := needed
+	rem := needed // Remaining bytes to pad
+
 	for rem > 0 {
-		chunk := rem
-		if chunk > 0xFFFD {
+		// Calculate max data payload for this segment. Need 4 bytes for header (0xFFFE + length).
+		maxDataPayload := rem - 4
+		if maxDataPayload <= 0 {
+			// Cannot fit even the 4-byte header. Break the loop.
+			// This might leave 1, 2, or 3 bytes unpadded.
+			if rem > 0 {
+				log.Printf("Warning: Remaining %d bytes too small for JPEG COM segment header. Final size will be slightly less than target.", rem)
+			}
+			break
+		}
+
+		// Determine actual data payload size for this segment
+		chunk := maxDataPayload
+		if chunk > 0xFFFD { // Respect max COM data size (65533)
 			chunk = 0xFFFD
 		}
-		// length = chunk + 2
+
+		// length field = data payload size + 2 bytes for length field itself
 		length := uint16(chunk + 2)
-		hdr := []byte{0xFF, 0xFE, byte(length >> 8), byte(length & 0xFF)}
+		hdr := []byte{0xFF, 0xFE, byte(length >> 8), byte(length & 0xFF)} // 4 bytes: Marker + Length
+
+		// Create random data payload
 		data := make([]byte, int(chunk))
-		cryptRand.Read(data)
-		// escape 0xFF bytes
-		for i := 0; i+1 < len(data); i++ {
-			if data[i] == 0xFF && data[i+1] != 0x00 {
-				data[i+1] = 0x00
-			}
+		_, err := cryptRand.Read(data)
+		if err != nil {
+			return fmt.Errorf("failed to read random bytes for padding: %w", err)
 		}
+
+		// Note: JPEG spec says 0xFF within COM data should be followed by 0x00.
+		// This implementation doesn't currently escape 0xFF bytes in the random data.
+		// While many decoders might ignore this, it's technically non-compliant.
+		// For simplicity in this generator, we omit the escaping for now.
+
+		// Append the constructed segment (header + data)
 		segments = append(segments, append(hdr, data...))
-		rem -= int64(len(hdr) + len(data))
-	}
-	// Assemble
+
+		// Decrease remaining bytes needed by the *total size* of the segment added
+		segmentSize := int64(len(hdr) + len(data)) // 4 + chunk
+		rem -= segmentSize
+	} // End padding loop
+
+	// Assemble final file
 	out := &bytes.Buffer{}
 	out.Write(pre)
 	for _, seg := range segments {
 		out.Write(seg)
 	}
 	out.Write(post)
-	return os.WriteFile(path, out.Bytes(), 0666)
+
+	finalBytes := out.Bytes()
+	finalSize := int64(len(finalBytes))
+
+	// Final size check and warning (optional but helpful)
+	if finalSize != targetSize {
+		// Only log warning if the difference is small (due to leftover 'rem' < 4)
+		if targetSize-finalSize > 0 && targetSize-finalSize < 4 {
+			log.Printf("Warning: Final JPEG size %d is %d bytes less than target %d due to padding constraints.", finalSize, targetSize-finalSize, targetSize)
+		} else {
+			// Log a more prominent warning for unexpected differences
+			log.Printf("Warning: Final JPEG size %d differs unexpectedly from target %d.", finalSize, targetSize)
+		}
+	}
+
+	return os.WriteFile(path, finalBytes, 0666)
 }

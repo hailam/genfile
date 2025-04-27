@@ -67,18 +67,21 @@ func (g *GifGenerator) Generate(path string, targetSize int64) error {
 	binary.Write(&buf, binary.LittleEndian, imgHeight)
 	buf.WriteByte(imgPackedFields)
 
-	// 5. Image Data (LZW minimum code size 2, data block for 1 pixel) - 5 bytes
+	// 5. Image Data (LZW minimum code size 2, standard minimal stream) - 7 bytes
 	lzwMinCodeSize := byte(2)
-	dataBlockSize := byte(2) // Size of following block
-	clearCode := byte(0x04)  // Clear code for code size 2 is 4
-	imageData := byte(0x01)  // Use color index 1 (white) for the single pixel
-	endOfInfo := byte(0x00)  // End code for code size 2 is 5? Let's use block terminator 0.
-	// Structure: CodeSize, BlockSize, ClearCode, Data..., BlockTerminator
-	buf.WriteByte(lzwMinCodeSize)
-	buf.WriteByte(dataBlockSize)
-	buf.WriteByte(clearCode)
-	buf.WriteByte(imageData)
-	buf.WriteByte(endOfInfo) // Zero-length data sub-block indicates end of image data
+	buf.WriteByte(lzwMinCodeSize) // LZW Minimum Code Size = 2
+
+	// Data sub-block 1: Clear Code, Data Code
+	buf.WriteByte(2)    // Block Size = 2 bytes follow
+	buf.WriteByte(0x04) // Clear Code (for code size 2)
+	buf.WriteByte(0x01) // Data: Use color index 1
+
+	// Data sub-block 2: End Of Information Code
+	buf.WriteByte(1)    // Block Size = 1 byte follows
+	buf.WriteByte(0x05) // EOI Code (for code size 2)
+
+	// Data sub-block 3: Terminator
+	buf.WriteByte(0) // Block Size = 0 (Terminator)
 
 	// 6. GIF Trailer - 1 byte
 	trailer := byte(0x3B) // ';'

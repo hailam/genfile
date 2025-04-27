@@ -17,6 +17,12 @@ func ParseSize(sizeStr string) (int64, error) {
 	if sizeStr == "" {
 		return 0, errors.New("size string is empty")
 	}
+
+	// if negative number, return error
+	if sizeStr[0] == '-' {
+		return 0, fmt.Errorf("negative size '%s' not allowed", sizeStr)
+	}
+
 	// Suffix multipliers
 	suffixes := map[string]int64{
 		"B": 1,
