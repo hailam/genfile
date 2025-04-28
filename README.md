@@ -1,5 +1,3 @@
-Okay, here is the complete Markdown content for the `README.md` file, incorporating the changes for the conditional DWG build and the accuracy table:
-
 # genfile
 
 `genfile` is a command-line utility written in Go to generate placeholder files of various formats with a specific target size. It's useful for testing scenarios that require files of specific sizes or types without needing actual meaningful content.
@@ -15,49 +13,56 @@ Okay, here is the complete Markdown content for the `README.md` file, incorporat
 
 The tool aims for exact byte-level accuracy where feasible. However, due to format complexities or library limitations, some formats might only achieve approximate sizing.
 
-| Format Extension(s)   | Generated Content                      | Size Accuracy | Build Type | Dependencies |
-| :-------------------- | :------------------------------------- | :------------ | :--------- | :----------- |
-| `.txt`, `.log`, `.md` | Random printable ASCII text            | Exact         | Standard   | None         |
-| `.png`                | Random noise image + padding chunk     | Exact         | Standard   | None         |
-| `.jpg`, `.jpeg`       | Random noise image + padding comments  | Exact         | Standard   | None         |
-| `.gif`                | Minimal single-color + padding         | Exact         | Standard   | None         |
-| `.mp4`, `.m4v`        | Minimal H.264 structure + frame repeat | Exact         | Standard   | None         |
-| `.wav`                | Standard header + random audio data    | Exact         | Standard   | None         |
-| `.docx`               | Minimal structure + padded content     | Approximate   | Standard   | None         |
-| `.xlsx`               | Minimal structure + padded content     | Approximate   | Standard   | None         |
-| `.pdf`                | Minimal structure + generated content  | Exact         | Standard   | None         |
-| `.csv`                | Random rows/columns                    | Exact         | Standard   | None         |
-| `.zip`                | Empty entry + padding entry            | Exact         | Standard   | None         |
-| `.html`               | Basic template + padding               | Exact         | Standard   | None         |
-| `.json`               | Key-value pairs + padding              | Exact         | Standard   | None         |
-| `.xml`                | Basic template + comment padding       | Exact         | Standard   | None         |
-| `.dxf`                | Minimal structure + comment padding    | Exact         | Standard   | None         |
+_(Note: MP4/H.264 uses a minimal structure for sizing, not full encoding)._
+
+| Format Extension(s)   | Generated Content                      | Size Accuracy | Validity | Notes                    |
+| :-------------------- | :------------------------------------- | :------------ | :------- | :----------------------- |
+| `.txt`, `.log`, `.md` | Random printable ASCII text            | Exact         | Full     |                          |
+| `.png`                | Random noise image + padding chunk     | Exact         | Full     |                          |
+| `.jpg`, `.jpeg`       | Random noise image + padding comments  | Exact         | Full     |                          |
+| `.gif`                | Minimal single-color + padding         | Exact         | Full     |                          |
+| `.mp4`, `.m4v`        | Minimal H.264 structure + frame repeat | Exact         | Partial  | Minimal structure        |
+| `.wav`                | Standard header + random audio data    | Exact         | Full     |                          |
+| `.docx`               | Minimal structure + padded content     | Approximate   | Full     | Based on OOXML structure |
+| `.xlsx`               | Minimal structure + padded content     | Approximate   | Full     | Based on OOXML structure |
+| `.pdf`                | Minimal structure + generated content  | Exact         | Full     |                          |
+| `.csv`                | Random rows/columns                    | Exact         | Full     |                          |
+| `.zip`                | Empty entry + padding entry            | Exact         | Full     |                          |
+| `.html`               | Basic template + padding               | Exact         | Full     |                          |
+| `.json`               | Key-value pairs + padding              | Exact         | Full     |                          |
+| `.xml`                | Basic template + comment padding       | Exact         | Full     |                          |
+| `.dxf`                | Minimal structure + comment padding    | Exact         | Full     |                          |
 
 ## Installation / Building
 
-### Standard Build (No DWG Support)
+### Prerequisites
 
-1.  Ensure you have Go installed (version 1.24.2 or later recommended).
-2.  Clone the repository (if you haven't already).
-3.  Navigate to the project's root directory.
-4.  Run the build command using the Makefile (or standard Go build):
+- Go version 1.24.2 or later installed.
+
+### Building
+
+1.  Clone the repository:
+    ```bash
+    git clone <your-repo-url>
+    cd <repository-directory>
+    ```
+2.  Build the binary using the Makefile or Go command:
 
     ```bash
-    # Using Makefile
+    # Using Makefile (if available)
     make build
 
     # Or using standard Go command
     go build -o genfile ./cmd/cli
     ```
 
-5.  This creates the `genfile` binary.
+3.  This creates the `genfile` binary in the current directory.
 
 ## Usage
 
-Run the compiled binary, providing the desired output file path and target size using flags:
+Run the compiled `genfile` binary, providing the desired output file path and target size using flags.
 
 ```bash
-# Standard build example
 ./genfile --output <output-path> --size <size>
 ```
 
@@ -73,17 +78,13 @@ Run the compiled binary, providing the desired output file path and target size 
 **Examples:**
 
 ```bash
-# Generate a 500 Kilobyte PNG image (standard build)
+# Generate a 500 Kilobyte PNG image
 ./genfile --output picture.png --size 500KB
 
-# Generate a 2 Megabyte WAV audio file (standard build)
+# Generate a 2 Megabyte WAV audio file
 ./genfile -o song.wav -s 2MB
 
-# Generate a 5 Megabyte DWG file (requires DWG-enabled build)
-# Assuming you built it as genfile_dwg
-./genfile_dwg --output drawing.dwg --size 5MB
-
-# Generate a 100KB Word document (standard build)
+# Generate a 100KB Word document
 ./genfile --output report.docx --size 100KB
 ```
 
