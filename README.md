@@ -1,46 +1,67 @@
+Okay, here is the complete Markdown content for the `README.md` file, incorporating the changes for the conditional DWG build and the accuracy table:
+
 # genfile
 
-`genfile` is a command-line utility written in Go to generate placeholder files of various formats with a precise target size. It's useful for testing scenarios that require files of specific sizes or types without needing actual meaningful content.
+`genfile` is a command-line utility written in Go to generate placeholder files of various formats with a specific target size. It's useful for testing scenarios that require files of specific sizes or types without needing actual meaningful content.
 
 ## Features
 
-- **Exact Sizing:** Generates files that match the requested size byte-for-byte using format-specific padding techniques.
+- **Target Sizing:** Generates files that aim to match the requested size. For most formats, this is byte-for-byte exact. See the table below.
 - **Structural Validity:** Produced files are structurally valid and can typically be opened by relevant applications (though the content is placeholder/random).
 - **Multiple Formats:** Supports a range of common file types.
 - **CLI Interface:** Simple command-line interaction using flags.
 
-## Supported Formats
+## Supported Formats & Size Accuracy
 
-- Text: `.txt`, `.log`, `.md`
-- Images: `.png`, `.jpg`, `.jpeg`, `.gif`
-- Video: `.mp4`, `.m4v`
-- Audio: `.wav`
-- Documents: `.docx`, `.xlsx`, `.pdf`, `.csv`
-- CAD: `.dwg` (generates a basic DXF file)
-- Archives: `.zip`
-- Web/Data: `.html`, `.json`, `.json`
+The tool aims for exact byte-level accuracy where feasible. However, due to format complexities or library limitations, some formats might only achieve approximate sizing.
+
+| Format Extension(s)   | Generated Content                      | Size Accuracy | Build Type | Dependencies |
+| :-------------------- | :------------------------------------- | :------------ | :--------- | :----------- |
+| `.txt`, `.log`, `.md` | Random printable ASCII text            | Exact         | Standard   | None         |
+| `.png`                | Random noise image + padding chunk     | Exact         | Standard   | None         |
+| `.jpg`, `.jpeg`       | Random noise image + padding comments  | Exact         | Standard   | None         |
+| `.gif`                | Minimal single-color + padding         | Exact         | Standard   | None         |
+| `.mp4`, `.m4v`        | Minimal H.264 structure + frame repeat | Exact         | Standard   | None         |
+| `.wav`                | Standard header + random audio data    | Exact         | Standard   | None         |
+| `.docx`               | Minimal structure + padded content     | Exact         | Standard   | None         |
+| `.xlsx`               | Minimal structure + padded content     | Exact         | Standard   | None         |
+| `.pdf`                | Minimal structure + generated content  | Approximate   | Standard   | None         |
+| `.csv`                | Random rows/columns                    | Exact         | Standard   | None         |
+| `.zip`                | Empty entry + padding entry            | Exact         | Standard   | None         |
+| `.html`               | Basic template + padding               | Exact         | Standard   | None         |
+| `.json`               | Key-value pairs + padding              | Exact         | Standard   | None         |
+| `.xml`                | Basic template + comment padding       | Exact         | Standard   | None         |
+| `.dxf`                | Minimal structure + comment padding    | Exact         | Standard   | None         |
 
 ## Installation / Building
 
-To build the `genfile` binary:
+### Standard Build (No DWG Support)
 
 1.  Ensure you have Go installed (version 1.24.2 or later recommended).
 2.  Clone the repository (if you haven't already).
 3.  Navigate to the project's root directory.
-4.  Run the build command using the Makefile:
+4.  Run the build command using the Makefile (or standard Go build):
 
     ```bash
+    # Using Makefile
     make build
+
+    # Or using standard Go command
+    go build -o genfile ./cmd/cli
     ```
 
-5.  This will create the executable binary at `./genfile` in the current directory.
+5.  This creates the `genfile` binary.
 
 ## Usage
 
-Run the compiled binary from the current directory, providing the desired output file path and target size using flags:
+Run the compiled binary, providing the desired output file path and target size using flags:
 
 ```bash
+# Standard build example
 ./genfile --output <output-path> --size <size>
+
+# DWG-enabled build example (using the renamed binary)
+./genfile_dwg --output drawing.dxf --size 5MB
 ```
 
 **Flags:**
@@ -55,19 +76,17 @@ Run the compiled binary from the current directory, providing the desired output
 **Examples:**
 
 ```bash
-# Generate a 500 Kilobyte PNG image
+# Generate a 500 Kilobyte PNG image (standard build)
 ./genfile --output picture.png --size 500KB
 
-# Generate a 2 Megabyte WAV audio file
+# Generate a 2 Megabyte WAV audio file (standard build)
 ./genfile -o song.wav -s 2MB
 
-# Generate a 50 Megabyte MP4 video file
-./genfile --output movie.mp4 --size 50M
+# Generate a 5 Megabyte DWG file (requires DWG-enabled build)
+# Assuming you built it as genfile_dwg
+./genfile_dwg --output drawing.dwg --size 5MB
 
-# Generate a 1 Gigabyte ZIP archive
-./genfile -o archive.zip -s 1G
-
-# Generate a 100KB Word document
+# Generate a 100KB Word document (standard build)
 ./genfile --output report.docx --size 100KB
 ```
 

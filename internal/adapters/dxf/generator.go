@@ -13,7 +13,6 @@ import (
 
 func init() {
 	factory.RegisterGenerator(ports.FileTypeDXF, New()) //
-	factory.RegisterGenerator(ports.FileTypeDWG, New()) //
 }
 
 type DxfGenerator struct{}

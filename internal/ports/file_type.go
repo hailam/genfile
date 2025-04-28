@@ -10,7 +10,7 @@ const (
 	FileTypeMP4  FileType = "mp4"
 	FileTypeM4V  FileType = "m4v"
 	FileTypeWAV  FileType = "wav"
-	FileTypeDWG  FileType = "dwg"
+	//FileTypeDWG  FileType = "dwg"
 	FileTypeDXF  FileType = "dxf"
 	FileTypeZIP  FileType = "zip"
 	FileTypeXLSX FileType = "xlsx"
