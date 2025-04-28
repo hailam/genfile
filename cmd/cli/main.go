@@ -16,6 +16,7 @@ import (
 	// This ensures their init() functions run and register the generators.
 	_ "github.com/hailam/genfile/internal/adapters/csv"
 	_ "github.com/hailam/genfile/internal/adapters/docx"
+	_ "github.com/hailam/genfile/internal/adapters/dwg"
 	_ "github.com/hailam/genfile/internal/adapters/dxf"
 	_ "github.com/hailam/genfile/internal/adapters/gif"
 	_ "github.com/hailam/genfile/internal/adapters/html"

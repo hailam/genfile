@@ -65,8 +65,8 @@ func mapExtensionToFileType(ext string) (ports.FileType, error) {
 		return ports.FileTypeM4V, nil
 	case "wav":
 		return ports.FileTypeWAV, nil
-	//case "dwg":
-	//	return ports.FileTypeDWG, nil
+	case "dwg":
+		return ports.FileTypeDWG, nil
 	case "dxf":
 		return ports.FileTypeDXF, nil
 	case "zip":
