@@ -59,9 +59,6 @@ Run the compiled binary, providing the desired output file path and target size 
 ```bash
 # Standard build example
 ./genfile --output <output-path> --size <size>
-
-# DWG-enabled build example (using the renamed binary)
-./genfile_dwg --output drawing.dxf --size 5MB
 ```
 
 **Flags:**
