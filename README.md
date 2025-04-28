@@ -23,9 +23,9 @@ The tool aims for exact byte-level accuracy where feasible. However, due to form
 | `.gif`                | Minimal single-color + padding         | Exact         | Standard   | None         |
 | `.mp4`, `.m4v`        | Minimal H.264 structure + frame repeat | Exact         | Standard   | None         |
 | `.wav`                | Standard header + random audio data    | Exact         | Standard   | None         |
-| `.docx`               | Minimal structure + padded content     | Exact         | Standard   | None         |
-| `.xlsx`               | Minimal structure + padded content     | Exact         | Standard   | None         |
-| `.pdf`                | Minimal structure + generated content  | Approximate   | Standard   | None         |
+| `.docx`               | Minimal structure + padded content     | Approximate   | Standard   | None         |
+| `.xlsx`               | Minimal structure + padded content     | Approximate   | Standard   | None         |
+| `.pdf`                | Minimal structure + generated content  | Exact         | Standard   | None         |
 | `.csv`                | Random rows/columns                    | Exact         | Standard   | None         |
 | `.zip`                | Empty entry + padding entry            | Exact         | Standard   | None         |
 | `.html`               | Basic template + padding               | Exact         | Standard   | None         |
